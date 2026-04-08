@@ -67,7 +67,6 @@ cp .env.example .env
 The file is auto-loaded by both the UI and the CLI scripts on startup.
 
 ```bash
-```bash
 # .env — fill in what you need:
 
 GOOGLE_API_KEY=AIza...         # Google Gemini keys start with AIza
@@ -216,6 +215,7 @@ class Observation(BaseModel):
 ```
 orbital-command/
 │
+├── __init__.py               Root package initialiser
 ├── env/                      Core simulation engine
 │   ├── models.py             Pydantic v2 — Observation, Action, EpisodeResult
 │   ├── physics.py            1-D orbital mechanics (eclipse, LoS, ISL BFS)
@@ -235,6 +235,9 @@ orbital-command/
 │
 ├── scoring/
 │   └── leaderboard.py        SQLite episode leaderboard (data/leaderboard.db)
+│
+├── data/
+│   └── leaderboard.db        SQLite database for storing episode results
 │
 ├── ui/
 │   ├── app.py                Gradio 6.x mission control dashboard
