@@ -32,6 +32,7 @@ def run(
     render: bool = False,
     events_enabled: bool = True,
     agent_name: str = "CLI Runner",
+    decentralized: bool = False,
 ):
     print(f"\n{'='*60}")
     print(f"  ORBITAL COMMAND  |  Task {task_id}  |  Backend: {backend}")
@@ -39,7 +40,7 @@ def run(
 
     env   = OrbitalEnv(task_id=task_id, seed=seed,
                        max_steps=max_steps, events_enabled=events_enabled)
-    agent = create_agent(backend, **({"model": model} if backend != "rule_based" else {}))
+    agent = create_agent(backend, decentralized=decentralized, **({"model": model} if backend != "rule_based" else {}))
     obs, info = env.reset()
 
     print(f"\nEpisode ID: {info['episode_id']}")
@@ -57,15 +58,28 @@ def run(
 
         action = agent.act(obs)
         obs, reward, terminated, truncated, info = env.step(action)
-        agent.record_step(step, action, reward)
+        
+        # Determine if single or batch
+        if isinstance(action, list):
+            for a in action:
+                agent.record_step(step, a, reward)
+        else:
+            agent.record_step(step, action, reward)
 
         total_reward += reward
         step += 1
 
         # Step summary
-        ar = info.get("action_result", {})
-        print(f"[{step:03d}] {action.action_type.value:25s} → {action.target_sat_id:15s} "
-              f"reward={reward:+7.1f}  total={total_reward:+8.1f}  {ar.get('message', '')[:50]}")
+        if isinstance(action, list):
+            ars = info.get("action_results", [])
+            for i, act in enumerate(action):
+                m = ars[i].get('message', '') if i < len(ars) else ''
+                print(f"[{step:03d}] {act.action_type.value:25s} → {act.target_sat_id:15s}  {m[:60]}")
+            print(f"       >>> Step Reward: {reward:+7.1f} | Total: {total_reward:+8.1f}")
+        else:
+            ar = info.get("action_results", [{}])[0] if "action_results" in info else info.get("action_result", {})
+            print(f"[{step:03d}] {action.action_type.value:25s} → {action.target_sat_id:15s} "
+                  f"reward={reward:+7.1f}  total={total_reward:+8.1f}  {ar.get('message', '')[:50]}")
 
         if terminated or truncated:
             break
@@ -104,6 +118,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed",    type=int, default=42)
     parser.add_argument("--render",  action="store_true")
     parser.add_argument("--no-events", action="store_true")
+    parser.add_argument("--decentralized", action="store_true", help="Launch swarm multi-agent mode")
     parser.add_argument("--name",    type=str, default="CLI Runner")
     args = parser.parse_args()
 
@@ -116,4 +131,5 @@ if __name__ == "__main__":
         render=args.render,
         events_enabled=not args.no_events,
         agent_name=args.name,
+        decentralized=args.decentralized,
     )

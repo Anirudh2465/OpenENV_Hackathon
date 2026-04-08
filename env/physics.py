@@ -29,6 +29,12 @@ ECLIPSE_HEATING     = -3.0   # thermal change per step in eclipse (cooling)
 SUNLIGHT_HEATING    = 2.5    # thermal change per step in sunlight (active mode)
 SLEEP_HEATING       = 0.5    # reduced thermal change while sleeping
 THERMAL_VENT_DELTA  = -15.0  # forced thermal reduction when venting
+ISL_RANGE_DEG = 45.0
+ACTIVE_EXTRA_DRAIN = 1.0
+
+# Degradation Rates (per step)
+THERMAL_DEGRADATION_RATE = 0.15   # Occurs when thermal > 80
+BATTERY_DEGRADATION_RATE = 0.20   # Occurs when battery < 10
 
 # Action costs
 ACTION_BATTERY_COST = {

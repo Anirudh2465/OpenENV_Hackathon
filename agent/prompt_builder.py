@@ -25,10 +25,11 @@ SYSTEM_PROMPT = """You are ORBITAL-COMMAND, an autonomous AI orchestrator for a 
 Your mission is to schedule satellite operations to maximize data revenue while preventing battery failure, storage overflow, and thermal damage.
 
 ## Resources You Control
-- **Battery (0–100%)**: Charges in sunlight (+4%/step) | Drains in eclipse. Hits 0% → satellite dies.
+- **Battery (0–100%)**: Charges in sunlight (+4%/step) | Drains in eclipse. Hits 0% → satellite dies. Max capacity reduces linearly with missing Health.
 - **Storage (0–100%)**: Fills when imaging. Must downlink before overflow → data destroyed.
 - **Fuel (0–100%)**: Used for station-keeping burns and ISL attitude control.
 - **Thermal (0–100%)**: Rises in sunlight when active. Above 70% → penalty. Above 100% → damage.
+- **Health (0–100%)**: Degrades if Thermal > 80% or Battery < 10%. Below 20% health, actions probabilistically fail. Restore using `maintenance_cycle` in sunlight.
 
 ## Available Actions (issue exactly ONE per step)
 | action_type             | Key Parameters                  | Battery Cost |
@@ -40,6 +41,8 @@ Your mission is to schedule satellite operations to maximize data revenue while 
 | station_keeping         | target_sat_id                   | -12%, -8fuel|
 | emergency_transmit      | target_sat_id, target_station   | -15%        |
 | thermal_vent            | target_sat_id                   | 0%          |
+| send_message            | target_sat_id, recipient_sat_id, message_payload | 0%     |
+| maintenance_cycle       | target_sat_id                   | -15%        |
 
 ## Eclipse Zone: {eclipse_start}° → {eclipse_end}° (NO solar charging inside)
 ## ISL Range: Satellites within 45° of each other can cross-link.
@@ -53,7 +56,9 @@ BatteryPenalty: 0 if bat≥50%, linear if 20–50%, EXPONENTIAL if <20%, DEATH a
 2. Downlink before storage hits 90% or data will be permanently overwritten.
 3. You can only capture an image when within 15° of the target.
 4. Sleep mode charges the battery — use it proactively.
-5. ALWAYS include a reasoning field explaining your strategic thinking.
+5. If a SPACE_DEBRIS event targets a satellite, you MUST use `station_keeping` before its steps expire, or it will collide and die.
+6. Monitor your Health index! If it drops too low, use `maintenance_cycle` in sunlight to repair.
+7. ALWAYS include a reasoning field explaining your strategic thinking.
 """.format(eclipse_start=ECLIPSE_START_DEG, eclipse_end=ECLIPSE_END_DEG)
 
 
@@ -193,6 +198,8 @@ Respond with ONLY valid JSON matching this schema:
   "request_id": "<request ID, if capturing>",
   "target_station": "<station ID, if downlinking>",
   "relay_chain": ["<sat1>", "<sat2>", ...],
+  "recipient_sat_id": "<target satellite ID, if sending message>",
+  "message_payload": "<text message>",
   "reasoning": "<your step-by-step strategic thinking>"
 }
 ```
@@ -200,6 +207,70 @@ Respond with ONLY valid JSON matching this schema:
 
     return "\n".join(lines)
 
+
+def build_localized_prompt(obs: Observation, sat_id: str, step_history: Optional[List[dict]] = None) -> str:
+    """Build a localized observation prompt for a single LLM running on ONE satellite."""
+    my_sat = next((s for s in obs.satellites if s.sat_id == sat_id), None)
+    if not my_sat:
+        return f"You are DEAD. Please return: {{\\\"action_type\\\": \\\"sleep_mode\\\", \\\"target_sat_id\\\": \\\"{sat_id}\\\", \\\"reasoning\\\": \\\"DEAD\\\"}}"
+
+    lines = []
+    lines.append(f"# STEP {obs.step_number} | Mode: DECENTRALIZED MULTI-AGENT SWARM")
+    lines.append(f"**YOU ARE SATELLITE:** {sat_id}\n")
+    
+    # My Telemetry
+    lines.append("## YOUR TELEMETRY")
+    lines.append(f"Position: {my_sat.orbital_position}° | Mode: {my_sat.mode.value}")
+    lines.append(f"Battery:  {my_sat.battery_level:.1f}%")
+    lines.append(f"Storage:  {my_sat.storage_used:.1f}%")
+    lines.append(f"Thermal:  {my_sat.thermal_level:.1f}°")
+    lines.append(f"Health:   {my_sat.health_index:.1f}%")
+    lines.append(f"Pending Data: {my_sat.pending_data_gb:.2f} GB")
+    
+    # Inbox
+    if getattr(my_sat, "inbox", []):
+        lines.append("\n## YOUR INBOX (Unread Messages)")
+        for msg in my_sat.inbox:
+            lines.append(f"  ✉️ {msg}")
+    else:
+        lines.append("\n## YOUR INBOX (Empty)")
+        
+    lines.append("\n## ISL NETWORK VISIBILITY")
+    neighbors = obs.isl_topology.get(sat_id, [])
+    if neighbors:
+        lines.append(f"You can send_message to: {', '.join(neighbors)}")
+    else:
+        lines.append("You are currently isolated. No ISL communication possible.")
+
+    lines.append("\n## PENDING IMAGING REQUESTS (Global)")
+    for req in obs.imaging_requests:
+        dl = f"deadline: {req.deadline_minute}" if req.deadline_minute else "none"
+        lines.append(f"  - [{req.id}] Target: {req.target_deg}° | PRIO: {req.priority.value} | Size: {req.data_size_gb}GB | {dl}")
+
+    if obs.active_events:
+        lines.append("\n## ⚡ ACTIVE STOCHASTIC EVENTS (Global)")
+        for ev in obs.active_events:
+            lines.append(f"  - [{ev.event_type.upper()}] {ev.description} (remaining: {ev.steps_remaining} steps)")
+
+    lines.append("""
+## 🎮 YOUR TURN — Issue ONE Action
+You are an autonomous agent running ON THIS SATELLITE. Make the best decision for YOURSELF.
+If you need help or want to coordinate, use `send_message`.
+
+Respond with ONLY valid JSON matching this schema:
+```json
+{
+  "action_type": "<one of the action types>",
+  "target_sat_id": \"""" + sat_id + """\",
+  "request_id": "<request ID, if capturing>",
+  "target_station": "<station ID, if downlinking>",
+  "relay_chain": ["<sat1>", "<sat2>", ...],
+  "recipient_sat_id": "<target satellite ID, if sending message>",
+  "message_payload": "<text message>",
+  "reasoning": "<your step-by-step strategic thinking>"
+}
+```""")
+    return "\n".join(lines)
 
 def build_system_prompt() -> str:
     return SYSTEM_PROMPT

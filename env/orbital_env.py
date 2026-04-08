@@ -15,7 +15,7 @@ from __future__ import annotations
 import copy
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -30,6 +30,7 @@ from .physics import (
     ACTIVE_EXTRA_DRAIN, DEGREES_PER_STEP,
     ECLIPSE_HEATING, ISL_RANGE_DEG, PASSIVE_DRAIN_RATE,
     SLEEP_HEATING, SOLAR_CHARGE_RATE, SUNLIGHT_HEATING, THERMAL_VENT_DELTA,
+    BATTERY_DEGRADATION_RATE, THERMAL_DEGRADATION_RATE,
     advance_position, battery_penalty, find_min_hop_path,
     has_line_of_sight, is_in_sunlight, latency_penalty,
     normalize, sat_positions_to_isl_graph, thermal_penalty,
@@ -156,9 +157,9 @@ class OrbitalEnv(gym.Env):
         obs = self._build_observation([])
         return obs, {"episode_id": self._episode_id}
 
-    def step(self, action: Action) -> Tuple[Observation, float, bool, bool, Dict]:
+    def step(self, actions: Union[Action, List[Action]]) -> Tuple[Observation, float, bool, bool, Dict]:
         """
-        Execute one action and advance the simulation by one step.
+        Execute one or multiple actions and advance the simulation by one step.
 
         Returns: (observation, reward, terminated, truncated, info)
         """
@@ -169,12 +170,21 @@ class OrbitalEnv(gym.Env):
         info: Dict[str, Any] = {}
         new_events: List[str] = []
 
-        # 1. Validate & apply action
-        result = self._apply_action(action)
-        reward += result.reward_delta
-        info["action_result"] = result.dict()
-        if result.new_events_triggered:
-            new_events.extend(result.new_events_triggered)
+        if not isinstance(actions, list):
+            actions = [actions]
+
+        # Clear inboxes BEFORE applying actions for this step
+        for sat in self._satellites.values():
+            sat["inbox"] = []
+
+        # 1. Validate & apply actions
+        info["action_results"] = []
+        for act in actions:
+            result = self._apply_action(act)
+            reward += result.reward_delta
+            info["action_results"].append(result.dict())
+            if result.new_events_triggered:
+                new_events.extend(result.new_events_triggered)
 
         # 2. Advance physics for all satellites
         self._tick_physics()
@@ -208,7 +218,7 @@ class OrbitalEnv(gym.Env):
                     reward -= latency_penalty(dl, self._minute)
                     req["done"] = True  # mark expired
 
-        # 6. Check terminal conditions
+        # 6. Check terminal conditions / Lethal Events
         terminated = False
         for sat_id, sat in self._satellites.items():
             if sat.get("battery_level", 100.0) <= 0.0 and sat.get("mode") != "dead":
@@ -216,6 +226,21 @@ class OrbitalEnv(gym.Env):
                 reward += DEATH_PENALTY
                 terminated = True
                 info[f"death_{sat_id}"] = "Battery depleted"
+
+        # Check lethal events in history
+        if self._event_engine:
+            for ev in self._event_engine.history:
+                # If a space_debris event expired naturally (reached 0) without being cleared, it hits.
+                if ev.event_type == "space_debris" and ev.steps_remaining <= 0 and ev.affected_target in self._satellites:
+                    target_sat = self._satellites[ev.affected_target]
+                    if target_sat.get("mode") != "dead":
+                        target_sat["mode"] = "dead"
+                        reward += DEATH_PENALTY
+                        terminated = True
+                        info[f"death_{ev.affected_target}"] = "Kessler Syndrome (Collision)"
+                        
+                        # Prevent triggering death repeatedly for the same historical event
+                        ev.event_type = "space_debris_resolved"
 
         # Check task-specific completion
         if not terminated and self._check_task_complete():
@@ -231,7 +256,7 @@ class OrbitalEnv(gym.Env):
         self._reward_history.append(reward)
         self._action_history.append({
             "step": self._step,
-            "action": action.model_dump(),
+            "actions": [a.model_dump() for a in actions],
             "reward": reward,
         })
         self._done = terminated or truncated
@@ -302,6 +327,10 @@ class OrbitalEnv(gym.Env):
             return ActionResult(success=False, message=f"Unknown satellite {sat_id}", reward_delta=0.0)
         if sat.get("mode") == "dead":
             return ActionResult(success=False, message=f"{sat_id} is DEAD", reward_delta=0.0)
+
+        # Hardware Fault Check
+        if sat.get("health_index", 100.0) < 20.0 and self._rng.random() < 0.2:
+            return ActionResult(success=False, message="HARDWARE FAULT: Action failed due to critical degradation.", reward_delta=-5.0)
 
         at = action.action_type
         reward = 0.0
@@ -450,6 +479,14 @@ class OrbitalEnv(gym.Env):
             reward = 2.0  # Small bonus for maintenance
             msg = f"{sat_id} performed station-keeping burn"
 
+            # Check for debris evasion
+            if self._event_engine:
+                for ev in self._event_engine.active_events:
+                    if ev.event_type == "space_debris" and ev.affected_target == sat_id:
+                        self._event_engine.clear_event(ev.event_id)
+                        reward += 50.0  # Evasion bonus
+                        msg += f" (EVADED SPACE DEBRIS!)"
+
         # --- EMERGENCY TRANSMIT ---
         elif at == ActionType.EMERGENCY_TRANSMIT:
             station_id = action.target_station
@@ -482,6 +519,43 @@ class OrbitalEnv(gym.Env):
             sat["thermal_level"] = max(0.0, old_thermal + THERMAL_VENT_DELTA)
             reward = 1.0  # Small housekeeping reward
             msg = f"{sat_id} thermal vent: {old_thermal:.1f}°→{sat['thermal_level']:.1f}°"
+
+        # --- SEND MESSAGE ---
+        elif at == ActionType.SEND_MESSAGE:
+            recipient_id = action.recipient_sat_id
+            if not recipient_id:
+                return ActionResult(success=False, message="SEND_MESSAGE requires recipient_sat_id", reward_delta=-1.0)
+            
+            sat_positions = {s_id: s.get("orbital_position", 0) for s_id, s in self._satellites.items()}
+            isl_graph = sat_positions_to_isl_graph(sat_positions, ISL_RANGE_DEG)
+
+            if recipient_id not in isl_graph.get(sat_id, []):
+                return ActionResult(success=False, message=f"{recipient_id} is out of ISL range", reward_delta=-1.0)
+            
+            recipient = self._satellites.get(recipient_id)
+            if not recipient or recipient.get("mode") == "dead":
+                return ActionResult(success=False, message=f"{recipient_id} is unavailable", reward_delta=-1.0)
+
+            # Insert message
+            payload = action.message_payload or ""
+            parsed_msg = f"From {sat_id}: {payload}"
+            recipient.setdefault("inbox", []).append(parsed_msg)
+            msg = f"{sat_id} sent message to {recipient_id}"
+            reward = 0.5  # minor reward for communication
+
+        # --- MAINTENANCE CYCLE ---
+        elif at == ActionType.MAINTENANCE_CYCLE:
+            if not sat.get("in_sunlight", True):
+                return ActionResult(success=False, message="Maintenance requires solar power (in sunlight)", reward_delta=-5.0)
+            cost = 15.0
+            if sat.get("battery_level", 0.0) < cost:
+                return ActionResult(success=False, message="Insufficient battery for maintenance", reward_delta=-2.0)
+            
+            sat["battery_level"] -= cost
+            old_health = sat.get("health_index", 100.0)
+            sat["health_index"] = min(100.0, old_health + 15.0)
+            reward = 10.0
+            msg = f"{sat_id} performed maintenance cycle: {old_health:.0f}% -> {sat['health_index']:.0f}%"
 
         sat["last_action"] = at.value
         return ActionResult(
@@ -533,6 +607,19 @@ class OrbitalEnv(gym.Env):
                 heat = SUNLIGHT_HEATING if sunlit else ECLIPSE_HEATING
             thermal = sat.get("thermal_level", 50.0) + heat
             sat["thermal_level"] = float(np.clip(thermal, 0.0, 100.0))
+
+            # Health Degradation & Battery Cap
+            health = sat.get("health_index", 100.0)
+            if sat["battery_level"] < 10.0:
+                health -= BATTERY_DEGRADATION_RATE
+            if sat["thermal_level"] > 80.0:
+                health -= THERMAL_DEGRADATION_RATE
+            
+            sat["health_index"] = float(np.clip(health, 0.0, 100.0))
+            max_capacity = 100.0 * (sat["health_index"] / 100.0)
+            # Clip battery dynamically according to health percentage cap
+            if sat["battery_level"] > max_capacity:
+                sat["battery_level"] = max_capacity
 
             # Update LoS
             positions = {sid: s.get("orbital_position", 0) for sid, s in self._stations.items()}

@@ -21,6 +21,8 @@ class ActionType(str, Enum):
     STATION_KEEPING      = "station_keeping"   # Fuel burn to correct orbital drift
     EMERGENCY_TRANSMIT   = "emergency_transmit" # High-power burst, costs 15% battery
     THERMAL_VENT         = "thermal_vent"       # Dump heat, costs 1 step
+    SEND_MESSAGE         = "send_message"       # Send JSON string via ISL
+    MAINTENANCE_CYCLE    = "maintenance_cycle"  # Restores health in sunlight via ISL
 
 
 class SatelliteMode(str, Enum):
@@ -39,11 +41,12 @@ class RequestPriority(str, Enum):
 
 
 class EventType(str, Enum):
-    SOLAR_FLARE         = "solar_flare"       # Charge +150%, random component damage
-    GROUND_OUTAGE       = "ground_outage"     # Station offline for N steps
-    PRIORITY_ESCALATION = "priority_escalation" # Request priority bumps up
-    ATMOSPHERIC_DRAG    = "atmospheric_drag"  # Satellite slows ~1 deg
-    BANDWIDTH_CONGESTION= "bandwidth_congestion" # Station queue fills
+    SOLAR_FLARE = "solar_flare"                  # Disables ISL temporarily
+    GROUND_OUTAGE = "ground_outage"              # Ground station offline
+    PRIORITY_ESCALATION = "priority_escalation"  # Normal requests become urgent
+    ATMOSPHERIC_DRAG = "atmospheric_drag"        # Orbit decays (requires station keeping)
+    BANDWIDTH_CONGESTION = "bandwidth_congestion" # Station bandwidth halved
+    SPACE_DEBRIS = "space_debris"                # Lethal debris tracking a satellitels
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +68,7 @@ class SatelliteTelemetry(BaseModel):
     steps_in_eclipse: int       = Field(0, ge=0, description="Consecutive steps in eclipse")
     orbital_drift_deg: float    = Field(0.0, description="Accumulated drift from nominal orbit")
     last_action: Optional[str]  = None
+    inbox: List[str]            = Field(default_factory=list, description="Messages from other satellites")
 
     # Derived helper (not stored)
     @property
@@ -150,6 +154,8 @@ class Action(BaseModel):
     request_id: Optional[str]      = None
     target_station: Optional[str]  = None
     relay_chain: Optional[List[str]] = None   # Ordered relay sat IDs for ISL routing
+    recipient_sat_id: Optional[str] = None    # Target satellite for SEND_MESSAGE
+    message_payload: Optional[str] = None     # JSON string payload for SEND_MESSAGE
     reasoning: Optional[str]       = None     # LLM chain-of-thought (logged, not executed)
 
     @model_validator(mode="after")
@@ -160,6 +166,10 @@ class Action(BaseModel):
             raise ValueError("downlink_data requires a target_station")
         if self.action_type == ActionType.INTER_SATELLITE_LINK and not self.relay_chain:
             raise ValueError("inter_satellite_link requires a relay_chain")
+        if self.action_type == ActionType.SEND_MESSAGE and not self.message_payload:
+            raise ValueError("send_message requires a message_payload")
+        if self.action_type == ActionType.SEND_MESSAGE and not self.recipient_sat_id:
+            raise ValueError("send_message requires a recipient_sat_id")
         return self
 
 

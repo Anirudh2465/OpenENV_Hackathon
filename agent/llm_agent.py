@@ -30,7 +30,7 @@ from env.models import Action, ActionType, Observation
 from env.physics import (has_line_of_sight, is_in_sunlight,
                           steps_until_eclipse, steps_until_sunlight,
                           sat_positions_to_isl_graph, find_min_hop_path)
-from agent.prompt_builder import build_observation_prompt, build_system_prompt
+from agent.prompt_builder import build_observation_prompt, build_system_prompt, build_localized_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class BaseAgent:
         self._call_count = 0
         self._total_latency_ms = 0.0
 
-    def act(self, obs: Observation) -> Action:
+    def act(self, obs: Observation, sat_id: Optional[str] = None) -> Action:
         raise NotImplementedError
 
     def record_step(self, step: int, action: Action, reward: float):
@@ -147,13 +147,16 @@ class GeminiAgent(BaseAgent):
             "  pip install google-generativeai   (legacy)"
         )
 
-    def act(self, obs: Observation) -> Action:
+    def act(self, obs: Observation, sat_id: Optional[str] = None) -> Action:
         if self._client is None:
             self._init_client()
 
         t0     = time.time()
         system = build_system_prompt()
-        prompt = build_observation_prompt(obs, self._step_history)
+        if sat_id:
+            prompt = build_localized_prompt(obs, sat_id, self._step_history)
+        else:
+            prompt = build_observation_prompt(obs, self._step_history)
         full_prompt = f"{system}\n\n{prompt}"   # Gemini takes system+user as single string
 
         try:
@@ -214,9 +217,12 @@ class HuggingFaceAgent(BaseAgent):
                 raise ImportError("huggingface_hub not installed. Run: pip install huggingface_hub")
         return self._client
 
-    def act(self, obs: Observation) -> Action:
+    def act(self, obs: Observation, sat_id: Optional[str] = None) -> Action:
         t0 = time.time()
-        prompt = build_observation_prompt(obs, self._step_history)
+        if sat_id:
+            prompt = build_localized_prompt(obs, sat_id, self._step_history)
+        else:
+            prompt = build_observation_prompt(obs, self._step_history)
         system = build_system_prompt()
 
         client = self._get_client()
@@ -251,14 +257,16 @@ class RuleBasedAgent(BaseAgent):
     def __init__(self):
         super().__init__(name="RuleBasedAgent")
 
-    def act(self, obs: Observation) -> Action:
+    def act(self, obs: Observation, sat_id: Optional[str] = None) -> Action:
         t0 = time.time()
-        action = self._decide(obs)
+        # Rule based agent doesn't natively support full localized view, so just act normally
+        # but if sat_id is provided, limit decisions to that sat where possible.
+        action = self._decide(obs, sat_id)
         self._call_count += 1
         self._total_latency_ms += (time.time() - t0) * 1000
         return action
 
-    def _decide(self, obs: Observation) -> Action:
+    def _decide(self, obs: Observation, force_sat_id: Optional[str] = None) -> Action:
         # Build lookup maps
         sat_map = {s.sat_id: s for s in obs.satellites}
         stn_map = {s.station_id: s for s in obs.ground_stations}
@@ -270,6 +278,7 @@ class RuleBasedAgent(BaseAgent):
         for sat in sorted(obs.satellites, key=lambda s: -s.thermal_level):
             if sat.mode.value == "dead":
                 continue
+            if force_sat_id and sat.sat_id != force_sat_id: continue
             if sat.thermal_level >= 75.0:
                 return Action(
                     action_type=ActionType.THERMAL_VENT,
@@ -281,6 +290,7 @@ class RuleBasedAgent(BaseAgent):
         for sat in sorted(obs.satellites, key=lambda s: s.battery_level):
             if sat.mode.value == "dead":
                 continue
+            if force_sat_id and sat.sat_id != force_sat_id: continue
             if sat.battery_level < 25.0 and sat.in_sunlight:
                 return Action(
                     action_type=ActionType.SLEEP_MODE,
@@ -290,6 +300,7 @@ class RuleBasedAgent(BaseAgent):
 
         # Priority 3: Downlink if data pending and in LoS
         for sat in obs.satellites:
+            if force_sat_id and sat.sat_id != force_sat_id: continue
             if sat.mode.value == "dead" or sat.pending_data_gb <= 0:
                 continue
             if sat.line_of_sight_to_ground:
@@ -306,6 +317,7 @@ class RuleBasedAgent(BaseAgent):
         for req in sorted(obs.imaging_requests,
                            key=lambda r: {"EMERGENCY": 0, "URGENT": 1, "ROUTINE": 2}[r.priority]):
             for sat in obs.satellites:
+                if force_sat_id and sat.sat_id != force_sat_id: continue
                 if sat.mode.value == "dead":
                     continue
                 if sat.battery_level < 15.0:
@@ -322,6 +334,7 @@ class RuleBasedAgent(BaseAgent):
 
         # Priority 5: ISL relay if isolated data exists
         for sat in obs.satellites:
+            if force_sat_id and sat.sat_id != force_sat_id: continue
             if sat.mode.value == "dead" or sat.pending_data_gb <= 0:
                 continue
             if sat.line_of_sight_to_ground:
@@ -347,6 +360,8 @@ class RuleBasedAgent(BaseAgent):
 
         # Default: Sleep the most battery-depleted non-dead satellite
         candidates = [s for s in obs.satellites if s.mode.value != "dead"]
+        if force_sat_id:
+            candidates = [s for s in candidates if s.sat_id == force_sat_id]
         if candidates:
             worst = min(candidates, key=lambda s: s.battery_level)
             return Action(
@@ -367,7 +382,30 @@ class RuleBasedAgent(BaseAgent):
 # Agent factory
 # ---------------------------------------------------------------------------
 
-def create_agent(backend: str = "rule_based", **kwargs) -> BaseAgent:
+class DecentralizedSwarmAgent(BaseAgent):
+    """Wraps an existing BaseAgent to call it concurrently for all satellites."""
+    def __init__(self, inner_agent: BaseAgent):
+        super().__init__(name=f"Swarm-{inner_agent.name}")
+        self.inner_agent = inner_agent
+
+    def act(self, obs: Observation, sat_id: Optional[str] = None):
+        import concurrent.futures
+        alive = [s.sat_id for s in obs.satellites if s.mode.value != "dead"]
+        actions = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(alive) or 1) as executor:
+            future_to_sid = {executor.submit(self.inner_agent.act, obs, sid): sid for sid in alive}
+            for future in concurrent.futures.as_completed(future_to_sid):
+                sid = future_to_sid[future]
+                try:
+                    res = future.result()
+                    res.target_sat_id = sid  # Enforce satellite takes action for itself
+                    actions.append(res)
+                except Exception as e:
+                    actions.append(Action(action_type=ActionType.SLEEP_MODE, target_sat_id=sid, reasoning=f"Error in swarm agent: {e}"))
+        return actions
+
+
+def create_agent(backend: str = "rule_based", decentralized: bool = False, **kwargs) -> BaseAgent:
     """
     Factory function to create an agent by backend name.
 
@@ -383,7 +421,10 @@ def create_agent(backend: str = "rule_based", **kwargs) -> BaseAgent:
     cls = backends.get(backend.lower())
     if cls is None:
         raise ValueError(f"Unknown backend '{backend}'. Options: {list(backends)}")
-    return cls(**kwargs)
+    agent = cls(**kwargs)
+    if decentralized:
+        agent = DecentralizedSwarmAgent(agent)
+    return agent
 
 
 # ---------------------------------------------------------------------------

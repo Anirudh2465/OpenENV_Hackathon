@@ -21,6 +21,7 @@ EVENT_PROBABILITIES: Dict[str, float] = {
     EventType.PRIORITY_ESCALATION:  0.05,
     EventType.ATMOSPHERIC_DRAG:     0.02,
     EventType.BANDWIDTH_CONGESTION: 0.04,
+    EventType.SPACE_DEBRIS:         0.03,
 }
 
 EVENT_DURATIONS: Dict[str, tuple] = {
@@ -30,6 +31,7 @@ EVENT_DURATIONS: Dict[str, tuple] = {
     EventType.PRIORITY_ESCALATION:  (1, 1),   # Instant
     EventType.ATMOSPHERIC_DRAG:     (3, 8),
     EventType.BANDWIDTH_CONGESTION: (4, 10),
+    EventType.SPACE_DEBRIS:         (2, 4),   # 2-4 steps to evade
 }
 
 EVENT_MAGNITUDES: Dict[str, tuple] = {
@@ -39,6 +41,7 @@ EVENT_MAGNITUDES: Dict[str, tuple] = {
     EventType.PRIORITY_ESCALATION:  (1.0, 1.0),  # Binary
     EventType.ATMOSPHERIC_DRAG:     (0.5, 2.0),  # Degrees of drag
     EventType.BANDWIDTH_CONGESTION: (0.3, 0.8),  # BW reduction factor
+    EventType.SPACE_DEBRIS:         (1.0, 1.0),  # Binary payload
 }
 
 EVENT_DESCRIPTIONS: Dict[str, str] = {
@@ -57,6 +60,9 @@ EVENT_DESCRIPTIONS: Dict[str, str] = {
     ),
     EventType.BANDWIDTH_CONGESTION: (
         "📡 BANDWIDTH CONGESTION: Station {target} queue saturated — reduced throughput."
+    ),
+    EventType.SPACE_DEBRIS: (
+        "🛸 SPACE DEBRIS: Incoming lethal debris tracking Sat {target}. Perform station_keeping immediately!"
     ),
 }
 
@@ -181,6 +187,10 @@ class EventEngine:
     def history(self) -> List[StochasticEvent]:
         return list(self._history)
 
+    def clear_event(self, event_id: str) -> None:
+        """Manually remove an event from active lists (e.g. evasive maneuver)."""
+        self._active = [ev for ev in self._active if ev.event_id != event_id]
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -192,7 +202,7 @@ class EventEngine:
         station_ids: List[str],
         request_ids: List[str],
     ) -> Optional[str]:
-        if event_type in (EventType.SOLAR_FLARE, EventType.ATMOSPHERIC_DRAG):
+        if event_type in (EventType.SOLAR_FLARE, EventType.ATMOSPHERIC_DRAG, EventType.SPACE_DEBRIS):
             return self.rng.choice(sat_ids) if sat_ids else None
         elif event_type in (EventType.GROUND_OUTAGE, EventType.BANDWIDTH_CONGESTION):
             return self.rng.choice(station_ids) if station_ids else None

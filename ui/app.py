@@ -39,7 +39,7 @@ except ImportError:
 from env.orbital_env import OrbitalEnv
 from env.models import Action, ActionType, Observation
 from agent.llm_agent import create_agent, BaseAgent
-from ui.orbit_svg import generate_orbit_svg
+from ui.orbit_3d import generate_orbit_3d
 from scoring.leaderboard import submit_result, get_leaderboard
 
 # ── Plotly (optional — falls back to sparkline if not installed) ──────────
@@ -254,8 +254,8 @@ def _make_state() -> Dict:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _obs_to_svg(obs: Observation, step: int, score: float) -> str:
-    return generate_orbit_svg(
+def _obs_to_3d(obs: Observation, step: int, score: float) -> Any:
+    return generate_orbit_3d(
         [s.model_dump() for s in obs.satellites],
         [s.model_dump() for s in obs.ground_stations],
         obs.isl_topology,
@@ -408,14 +408,14 @@ def _apply_api_keys(gemini_key: str, hf_token: str) -> str:
 _EMPTY_OUTPUTS = ("", "", "", "", "", "0", "0.0", "0/0", None, "*No data.*", "")
 
 
-def on_reset(task_choice: str, backend_choice: str, state: Dict) -> Tuple:
+def on_reset(task_choice: str, backend_choice: str, decentralized: bool, state: Dict) -> Tuple:
     task_id = _parse_task_id(task_choice)
     backend = BACKEND_OPTIONS.get(backend_choice, "rule_based")
 
     try:
         env   = OrbitalEnv(task_id=task_id, seed=42, events_enabled=True)
         obs, info = env.reset()
-        agent = create_agent(backend)
+        agent = create_agent(backend, decentralized=decentralized)
     except Exception as ex:
         return (state, f"<div style='color:#ff1744; padding:40px; font-family:monospace;'>"
                 f"❌ Reset failed:<br><pre>{ex}</pre></div>",
@@ -426,11 +426,11 @@ def on_reset(task_choice: str, backend_choice: str, state: Dict) -> Tuple:
                   "running": False, "step": 0, "score": 0.0,
                   "action_log": [], "reward_log": [], "done": False})
 
-    svg = _obs_to_svg(obs, 0, 0.0)
+    plot_3d = _obs_to_3d(obs, 0, 0.0)
     plot = _make_reward_plot([])
     return (
         state,
-        svg,
+        plot_3d,
         _format_telemetry_md(obs),
         _format_requests_md(obs),
         _format_events_md(obs),
@@ -459,21 +459,37 @@ def on_step(state: Dict) -> Tuple:
         return (state, f"<div style='color:#ff1744;padding:20px;'><pre>{ex}</pre></div>",
                 *_EMPTY_OUTPUTS)
 
-    agent.record_step(state["step"], action, reward)
+    if isinstance(action, list):
+        for a in action:
+            agent.record_step(state["step"], a, reward)
+    else:
+        agent.record_step(state["step"], action, reward)
+
     state["obs"]      = obs_new
     state["step"]    += 1
     state["score"]   += reward
     state["reward_log"].append(reward)
     state["done"]     = terminated or truncated
 
-    ar    = info.get("action_result", {})
-    msg   = ar.get("message", "")
-    think = (action.reasoning or "")[:130]
-    log   = (f"[{state['step']:03d}] {action.action_type.value:<22} → {action.target_sat_id:<14}"
-             f"  {reward:+7.1f} pts\n"
-             f"   💭 {think}\n"
-             f"   ↳  {msg}\n")
-    state["action_log"].append(log)
+    ars = info.get("action_results", [])
+    if isinstance(action, list):
+        for i, act in enumerate(action):
+            msg = ars[i].get("message", "") if i < len(ars) else ""
+            think = (act.reasoning or "")[:130]
+            log   = (f"[{state['step']:03d}] {act.action_type.value:<22} → {act.target_sat_id:<14}"
+                     f"  {reward:+7.1f} pts\n"
+                     f"   💭 {think}\n"
+                     f"   ↳  {msg}\n")
+            state["action_log"].append(log)
+    else:
+        ar    = ars[0] if ars else info.get("action_result", {})
+        msg   = ar.get("message", "")
+        think = (action.reasoning or "")[:130]
+        log   = (f"[{state['step']:03d}] {action.action_type.value:<22} → {action.target_sat_id:<14}"
+                 f"  {reward:+7.1f} pts\n"
+                 f"   💭 {think}\n"
+                 f"   ↳  {msg}\n")
+        state["action_log"].append(log)
 
     if state["done"]:
         result = env.get_episode_result()
@@ -500,9 +516,9 @@ def on_run(state: Dict, max_steps: int) -> Tuple:
 def _build_outputs(state: Dict, extra_log_prefix: str = "") -> Tuple:
     obs   = state.get("obs")
     if obs is None:
-        return (state, "", *_EMPTY_OUTPUTS)
+        return (state, None, *_EMPTY_OUTPUTS[1:]) # handle gr.Plot correctly
 
-    svg       = _obs_to_svg(obs, state["step"], state["score"])
+    plot_3d   = _obs_to_3d(obs, state["step"], state["score"])
     tel_md    = _format_telemetry_md(obs)
     req_md    = _format_requests_md(obs)
     ev_md     = _format_events_md(obs)
@@ -516,7 +532,7 @@ def _build_outputs(state: Dict, extra_log_prefix: str = "") -> Tuple:
     spark     = _build_sparkline(state["reward_log"])
     lb_txt    = _format_leaderboard_md(state["task_id"]) if state["done"] else ""
 
-    return (state, svg, tel_md, req_md, ev_md,
+    return (state, plot_3d, tel_md, req_md, ev_md,
             log_txt, obj_txt, step_txt, score_txt, req_txt,
             plot, spark, lb_txt)
 
@@ -579,6 +595,7 @@ def build_ui() -> gr.Blocks:
             backend_dd = gr.Dropdown(choices=list(BACKEND_OPTIONS.keys()),
                                      value=list(BACKEND_OPTIONS.keys())[0],
                                      label="🤖  LLM Backend", scale=3)
+            decentralized_cb = gr.Checkbox(label="🔗 Swarm Mode", value=False, scale=1)
             reset_btn  = gr.Button("🔄  RESET",  variant="primary", scale=1)
             step_btn   = gr.Button("▶  STEP",   variant="primary", scale=1)
             run_slider = gr.Slider(5, 200, value=50, step=5, label="Auto-steps", scale=2)
@@ -599,14 +616,7 @@ def build_ui() -> gr.Blocks:
         with gr.Row():
             # Left — orbit visualiser
             with gr.Column(scale=5, min_width=540):
-                orbit_html = gr.HTML(
-                    value=(
-                        '<div id="orbit-container" style="min-height:540px; '
-                        'display:flex; align-items:center; justify-content:center; '
-                        'color:#4a6888; font-family:Orbitron,sans-serif; font-size:.9rem;">'
-                        '🌍&nbsp; Select a task and press RESET</div>'
-                    )
-                )
+                orbit_plot = gr.Plot(label="", elem_id="orbit-container")
 
             # Right — panels
             with gr.Column(scale=3):
@@ -660,14 +670,14 @@ def build_ui() -> gr.Blocks:
 
         # ── Output list (must match every callback's return) ──────────────
         OUTPUTS = [
-            state, orbit_html,
+            state, orbit_plot,
             telemetry_md, requests_md, events_md,
             action_log, obj_out,
             step_out, score_out, req_out,
             reward_plot, reward_spark, lb_md,
         ]
 
-        reset_btn.click(on_reset, inputs=[task_dd, backend_dd, state], outputs=OUTPUTS)
+        reset_btn.click(on_reset, inputs=[task_dd, backend_dd, decentralized_cb, state], outputs=OUTPUTS)
         step_btn.click(on_step,   inputs=[state],                       outputs=OUTPUTS)
         run_btn.click( on_run,    inputs=[state, run_slider],            outputs=OUTPUTS)
 

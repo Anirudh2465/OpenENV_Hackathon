@@ -18,10 +18,20 @@ under relentless pressure:
 | Storage overflow | Data is **permanently destroyed** if drives fill |
 | Fuel budgets | ISL manoeuvres and station-keeping consume ΔV |
 | Thermal limits | Active components heat up; must vent or sleep |
-| Stochastic disruptions | Solar flares, blizzards, congestion, atmospheric drag |
+| Hardware Lifecycle | Low battery or high thermal permanently degrade maximum capacity |
+| Stochastic disruptions | Solar flares, blizzards, congestion, atmospheric drag, **Space Debris** |
 
 The LLM receives a **structured JSON observation** every step and must issue one **typed action**.
 Poor look-ahead reasoning (greedy choices) kills satellites and destroys data.
+
+---
+
+## 🌟 Hackathon Suite Additions
+This project has been massively expanded with four major hallmark features:
+1. **Decentralized Multi-Agent Swarm**: Satellites no longer run centrally. Each satellite runs an independent LLM inference loop concurrently, forced to leverage the `SEND_MESSAGE` action to establish global awareness over Inter-Satellite Links (ISL).
+2. **Live 3D Globe Visualization**: Replaced the static 2D vector map with a real-time Plotly 3D `Scattergeo` rendering that maps 1-D satellite coordinates to realistic orbital paths, rendering ground stations, night zones, and ISL topologies dynamically.
+3. **Space Debris (Kessler Syndrome)**: A lethal stochastic event where debris homes in on a target satellite. The agent must pause data extraction and burn fuel via a `STATION_KEEPING` evasive manoeuvre before a catastrophic collision occurs.
+4. **Hardware Degradation & Lifecycle Management**: Operating above 80° thermal or below 10% battery initiates permanent passive damage to a satellite's Health index. Damaged hardware limits maximum battery capacity and introduces stochastic hardware faults. Agents must schedule a `MAINTENANCE_CYCLE` to restore health.
 
 ---
 
@@ -197,6 +207,8 @@ class Observation(BaseModel):
 | `station_keeping` | −12 % | **−8 %** | — |
 | `emergency_transmit` | **−15 %** | — | partial burst |
 | `thermal_vent` | — | — | −15° thermal |
+| `send_message` | — | — | transmits payload via ISL |
+| `maintenance_cycle` | **−15 %** | — | **+15 % Health** |
 
 ---
 
@@ -240,8 +252,9 @@ orbital-command/
 │   └── leaderboard.db        SQLite database for storing episode results
 │
 ├── ui/
-│   ├── app.py                Gradio 6.x mission control dashboard
-│   └── orbit_svg.py          SVG orbit renderer (satellites, ISL, eclipse, stars)
+│   ├── app.py                Gradio 6.x mission control dashboard (Swarm Mode)
+│   ├── orbit_3d.py           Plotly 3D real-time earth projection engine
+│   └── orbit_svg.py          Legacy SVG orbit renderer
 │
 ├── scripts/
 │   ├── run_episode.py        CLI headless runner
