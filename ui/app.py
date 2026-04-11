@@ -78,10 +78,10 @@ CSS = """
 
 /* ── Base ─────────────────────────────────────────────── */
 :root {
-  --bg:         #070d1a;
-  --bg-card:    #0d1528;
-  --bg-panel:   #0f1e35;
-  --border:     #1c2f4a;
+  --bg:         #02040a;
+  --bg-card:    rgba(13, 21, 40, 0.4);
+  --bg-panel:   rgba(15, 30, 53, 0.5);
+  --border:     rgba(42, 114, 214, 0.3);
   --blue:       #2196f3;
   --cyan:       #00e5ff;
   --green:      #00e676;
@@ -90,64 +90,75 @@ CSS = """
   --purple:     #7c4dff;
   --text:       #ddeeff;
   --muted:      #4a6888;
-  --glow-b:     0 0 18px rgba(33,150,243,.35);
-  --glow-g:     0 0 18px rgba(0,230,118,.3);
+  --glow-b:     0 0 20px rgba(33,150,243,.4);
+  --glow-c:     0 0 20px rgba(0,229,255,.4);
 }
 
-body, .gradio-container {
-  background: var(--bg) !important;
+body {
+  background: radial-gradient(circle at 50% 20%, #081224 0%, #010205 100%) !important;
+  background-attachment: fixed !important;
+  background-size: cover !important;
+}
+.gradio-container {
+  background: transparent !important;
   font-family: 'JetBrains Mono', monospace !important;
   color: var(--text) !important;
 }
 
-/* ── Panels ───────────────────────────────────────────── */
+/* ── Panels (Glassmorphism) ───────────────────────────── */
 .panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  box-shadow: var(--glow-b);
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(33, 150, 243, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
 
 /* ── Markdown ─────────────────────────────────────────── */
 .prose, .markdown-body { color: var(--text) !important; }
-table { border-collapse: collapse; width: 100%; }
-th { background: #111e33; color: var(--cyan); font-size: .75rem; padding: 5px 8px; text-align: left; }
-td { border-top: 1px solid #1a2d46; padding: 4px 8px; font-size: .75rem; }
-code { background: #0a1525; border-radius: 4px; padding: 1px 5px; color: var(--cyan); }
+table { border-collapse: collapse; width: 100%; border-radius: 8px; overflow: hidden; }
+th { background: rgba(17, 30, 51, 0.8); color: var(--cyan); font-size: .75rem; padding: 6px 10px; text-align: left; }
+td { border-top: 1px solid rgba(26, 45, 70, 0.5); padding: 5px 10px; font-size: .75rem; }
+code { background: rgba(10, 21, 37, 0.6); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 4px; padding: 1px 5px; color: var(--cyan); }
 
 /* ── Buttons ──────────────────────────────────────────── */
 button.lg {
-  background: linear-gradient(135deg, #1565c0, #0d47a1) !important;
+  background: linear-gradient(135deg, rgba(21, 101, 192, 0.8), rgba(13, 71, 161, 0.8)) !important;
   border: 1px solid var(--blue) !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   font-family: 'Orbitron', sans-serif !important;
-  font-size: .82rem !important;
+  font-size: .85rem !important;
   font-weight: 700 !important;
-  letter-spacing: .07em !important;
+  letter-spacing: .08em !important;
   color: #fff !important;
-  box-shadow: 0 0 12px rgba(33,150,243,.4) !important;
-  transition: all .18s ease !important;
+  box-shadow: 0 0 16px rgba(33,150,243,.5), inset 0 0 10px rgba(255,255,255,0.2) !important;
+  backdrop-filter: blur(8px) !important;
+  text-shadow: 0 0 6px #fff !important;
+  transition: all .2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
 button.lg:hover {
-  box-shadow: 0 0 22px rgba(33,150,243,.75) !important;
-  transform: translateY(-1px) !important;
+  box-shadow: 0 0 26px rgba(33,150,243,.8), inset 0 0 15px rgba(255,255,255,0.4) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  background: linear-gradient(135deg, rgba(30, 136, 229, 0.9), rgba(21, 101, 192, 0.9)) !important;
 }
-button.secondary { background: #111e33 !important; border-color: var(--border) !important; }
+button.secondary { background: rgba(17, 30, 51, 0.5) !important; border-color: var(--border) !important; backdrop-filter: blur(4px) !important; }
 
 /* ── Inputs ───────────────────────────────────────────── */
 textarea, input[type=text], input[type=password], input[type=number], .block {
   background: var(--bg-panel) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   color: var(--text) !important;
   font-family: 'JetBrains Mono', monospace !important;
   font-size: .8rem !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3) !important;
 }
-label > span { color: var(--muted) !important; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
+label > span { color: var(--cyan) !important; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; opacity: 0.8; }
 
 /* ── Accordion ────────────────────────────────────────── */
-.accordion { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; }
+.accordion { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 12px !important; backdrop-filter: blur(12px) !important; }
 
 /* ── Dropdowns ────────────────────────────────────────── */
 select, .dropdown { background: var(--bg-panel) !important; border-color: var(--border) !important; color: var(--text) !important; }
@@ -155,50 +166,60 @@ select, .dropdown { background: var(--bg-panel) !important; border-color: var(--
 /* ── Stat textboxes ───────────────────────────────────── */
 #stat-step textarea, #stat-score textarea, #stat-req textarea {
   font-family: 'Orbitron', sans-serif !important;
-  font-size: 1.3rem !important;
-  font-weight: 700 !important;
-  color: var(--cyan) !important;
+  font-size: 1.5rem !important;
+  font-weight: 900 !important;
+  color: #fff !important;
+  text-shadow: var(--glow-c) !important;
   text-align: center !important;
+  background: rgba(0, 229, 255, 0.05) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+  box-shadow: inset 0 0 15px rgba(0, 229, 255, 0.1) !important;
 }
 
 /* ── Action log ───────────────────────────────────────── */
 #action-log textarea {
   font-size: .76rem !important;
-  line-height: 1.55 !important;
-  min-height: 240px !important;
+  line-height: 1.6 !important;
+  min-height: 250px !important;
+  background: rgba(0,0,0,0.3) !important;
 }
 
 /* ── API key panel ────────────────────────────────────── */
-.api-key-note {
-  font-size: .72rem;
-  color: var(--muted);
-  line-height: 1.6;
-  padding: 8px 0 4px 0;
-}
+.api-key-note { font-size: .75rem; color: var(--muted); line-height: 1.6; padding: 8px 0 4px 0; }
 
 /* ── Scrollbar ────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(42, 114, 214, 0.5); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
 
 /* ── Orbit container ──────────────────────────────────── */
 #orbit-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 540px;
-  background: #060b16;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  min-height: 560px;
+  background: radial-gradient(circle at center, rgba(13, 71, 161, 0.2) 0%, rgba(0,0,0,0) 70%) !important;
+  border: 1px solid rgba(42, 114, 214, 0.2);
+  border-radius: 16px;
+  box-shadow: inset 0 0 30px rgba(33, 150, 243, 0.1);
+  position: relative;
 }
 
+/* Add a pulse to the orbit container border */
+@keyframes border-pulse {
+  0% { border-color: rgba(42, 114, 214, 0.2); box-shadow: inset 0 0 30px rgba(33, 150, 243, 0.1); }
+  50% { border-color: rgba(0, 229, 255, 0.5); box-shadow: inset 0 0 50px rgba(0, 229, 255, 0.2); }
+  100% { border-color: rgba(42, 114, 214, 0.2); box-shadow: inset 0 0 30px rgba(33, 150, 243, 0.1); }
+}
+#orbit-container { animation: border-pulse 4s infinite ease-in-out; }
+
 /* ── Grade badge ──────────────────────────────────────── */
-.grade-s { color: #ffd700 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
-.grade-a { color: #00e676 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
+.grade-s { color: #ffd700 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; text-shadow: 0 0 10px #ffd700 !important; }
+.grade-a { color: #00e676 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; text-shadow: 0 0 10px #00e676 !important; }
 .grade-b { color: #2196f3 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
 .grade-c { color: #ffab40 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
-.grade-f { color: #ff1744 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
+.grade-f { color: #ff1744 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; text-shadow: 0 0 10px #ff1744 !important; }
 """
 
 HEADER_HTML = """
@@ -658,14 +679,31 @@ def build_ui() -> gr.Blocks:
                 return _format_leaderboard_md(tid)
             lb_refresh.click(_refresh_lb, inputs=[lb_task_filter], outputs=[lb_md])
 
-        # ── Footer ──────────────────────────────────────────────────────────
+        # ── Footer & JS Injection ───────────────────────────────────────────
         gr.HTML("""
         <div style="text-align:center; padding:14px 0 6px 0;
-                    font-size:.68rem; color:#2a3f5a; font-family:JetBrains Mono,monospace;">
+                    font-size:.68rem; color:rgba(255,255,255,0.4); font-family:JetBrains Mono,monospace;">
           OpenEnv-Orbital-Command &nbsp;·&nbsp;
-          <a href="https://github.com" style="color:#2a3f5a;">GitHub</a> &nbsp;·&nbsp;
+          <a href="https://github.com" style="color:#2196f3;">GitHub</a> &nbsp;·&nbsp;
           Deterministic LEO Simulation — pure numpy, runs on 2 vCPU / 4 GB RAM
         </div>
+        <script>
+        // Auto-Spin the Plotly Earth Globe continuously!
+        if(!window.spinInterval) {
+            window.spinInterval = setInterval(() => {
+                const el = document.getElementById("orbit-container");
+                if (el) {
+                    const plots = el.getElementsByClassName("js-plotly-plot");
+                    if (plots.length > 0 && plots[0].layout && plots[0].layout.geo) {
+                        const p = plots[0];
+                        let lon = p.layout.geo.center.lon || 0;
+                        lon = (lon + 0.3) % 360;  // Smoothly increment longitude
+                        Plotly.relayout(p, {"geo.center.lon": lon});
+                    }
+                }
+            }, 50); // Updates every ~50ms
+        }
+        </script>
         """)
 
         # ── Output list (must match every callback's return) ──────────────
