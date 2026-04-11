@@ -4,7 +4,7 @@ OpenEnv-Orbital-Command | ui/app.py
 Gradio 6.x mission control dashboard.
 
 API KEYS — Three ways to configure (in order of priority):
-  1. Type them directly in the '🔐 API Keys' section of the UI (not saved to disk)
+  1. Type them directly in the ' API Keys' section of the UI (not saved to disk)
   2. Create a `.env` file in the project root (copy `.env.example`)
   3. Set OS environment variables before launching
 
@@ -54,17 +54,17 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 TASK_NAMES = {
-    1: "☀️  Task 1 — Eclipse Survival  [Easy]",
-    2: "💾  Task 2 — Storage Bottleneck  [Medium]",
-    3: "🔗  Task 3 — Laser Cross-Link  [Hard]",
-    4: "🌐  Task 4 — Swarm Harvest  [Very Hard]",
-    5: "🚨  Task 5 — Emergency Response  [Expert]",
+    1: "Task 1 — Eclipse Survival  [Easy]",
+    2: "Task 2 — Storage Bottleneck  [Medium]",
+    3: "Task 3 — Laser Cross-Link  [Hard]",
+    4: "Task 4 — Swarm Harvest  [Very Hard]",
+    5: "Task 5 — Emergency Response  [Expert]",
 }
 
 BACKEND_OPTIONS = {
-    "✨  Gemini  (gemini-2.0-flash / 1.5-pro)": "gemini",
-    "🤖  Rule-Based (No API key)":              "rule_based",
-    "🤗  HuggingFace Inference API":            "huggingface",
+    "Gemini  (gemini-2.0-flash / 1.5-pro)": "gemini",
+    "Rule-Based (No API key)":              "rule_based",
+    "HuggingFace Inference API":            "huggingface",
 }
 
 MODEL_DEFAULTS = {
@@ -78,10 +78,10 @@ CSS = """
 
 /* ── Base ─────────────────────────────────────────────── */
 :root {
-  --bg:         #070d1a;
-  --bg-card:    #0d1528;
-  --bg-panel:   #0f1e35;
-  --border:     #1c2f4a;
+  --bg:         #02040a;
+  --bg-card:    rgba(13, 21, 40, 0.4);
+  --bg-panel:   rgba(15, 30, 53, 0.5);
+  --border:     rgba(42, 114, 214, 0.3);
   --blue:       #2196f3;
   --cyan:       #00e5ff;
   --green:      #00e676;
@@ -90,64 +90,75 @@ CSS = """
   --purple:     #7c4dff;
   --text:       #ddeeff;
   --muted:      #4a6888;
-  --glow-b:     0 0 18px rgba(33,150,243,.35);
-  --glow-g:     0 0 18px rgba(0,230,118,.3);
+  --glow-b:     0 0 20px rgba(33,150,243,.4);
+  --glow-c:     0 0 20px rgba(0,229,255,.4);
 }
 
-body, .gradio-container {
-  background: var(--bg) !important;
+body {
+  background: radial-gradient(circle at 50% 20%, #081224 0%, #010205 100%) !important;
+  background-attachment: fixed !important;
+  background-size: cover !important;
+}
+.gradio-container {
+  background: transparent !important;
   font-family: 'JetBrains Mono', monospace !important;
   color: var(--text) !important;
 }
 
-/* ── Panels ───────────────────────────────────────────── */
+/* ── Panels (Glassmorphism) ───────────────────────────── */
 .panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  box-shadow: var(--glow-b);
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(33, 150, 243, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
 
 /* ── Markdown ─────────────────────────────────────────── */
 .prose, .markdown-body { color: var(--text) !important; }
-table { border-collapse: collapse; width: 100%; }
-th { background: #111e33; color: var(--cyan); font-size: .75rem; padding: 5px 8px; text-align: left; }
-td { border-top: 1px solid #1a2d46; padding: 4px 8px; font-size: .75rem; }
-code { background: #0a1525; border-radius: 4px; padding: 1px 5px; color: var(--cyan); }
+table { border-collapse: collapse; width: 100%; border-radius: 8px; overflow: hidden; }
+th { background: rgba(17, 30, 51, 0.8); color: var(--cyan); font-size: .75rem; padding: 6px 10px; text-align: left; }
+td { border-top: 1px solid rgba(26, 45, 70, 0.5); padding: 5px 10px; font-size: .75rem; }
+code { background: rgba(10, 21, 37, 0.6); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 4px; padding: 1px 5px; color: var(--cyan); }
 
 /* ── Buttons ──────────────────────────────────────────── */
 button.lg {
-  background: linear-gradient(135deg, #1565c0, #0d47a1) !important;
+  background: linear-gradient(135deg, rgba(21, 101, 192, 0.8), rgba(13, 71, 161, 0.8)) !important;
   border: 1px solid var(--blue) !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   font-family: 'Orbitron', sans-serif !important;
-  font-size: .82rem !important;
+  font-size: .85rem !important;
   font-weight: 700 !important;
-  letter-spacing: .07em !important;
+  letter-spacing: .08em !important;
   color: #fff !important;
-  box-shadow: 0 0 12px rgba(33,150,243,.4) !important;
-  transition: all .18s ease !important;
+  box-shadow: 0 0 16px rgba(33,150,243,.5), inset 0 0 10px rgba(255,255,255,0.2) !important;
+  backdrop-filter: blur(8px) !important;
+  text-shadow: 0 0 6px #fff !important;
+  transition: all .2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
 button.lg:hover {
-  box-shadow: 0 0 22px rgba(33,150,243,.75) !important;
-  transform: translateY(-1px) !important;
+  box-shadow: 0 0 26px rgba(33,150,243,.8), inset 0 0 15px rgba(255,255,255,0.4) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  background: linear-gradient(135deg, rgba(30, 136, 229, 0.9), rgba(21, 101, 192, 0.9)) !important;
 }
-button.secondary { background: #111e33 !important; border-color: var(--border) !important; }
+button.secondary { background: rgba(17, 30, 51, 0.5) !important; border-color: var(--border) !important; backdrop-filter: blur(4px) !important; }
 
 /* ── Inputs ───────────────────────────────────────────── */
 textarea, input[type=text], input[type=password], input[type=number], .block {
   background: var(--bg-panel) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   color: var(--text) !important;
   font-family: 'JetBrains Mono', monospace !important;
   font-size: .8rem !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3) !important;
 }
-label > span { color: var(--muted) !important; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
+label > span { color: var(--cyan) !important; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; opacity: 0.8; }
 
 /* ── Accordion ────────────────────────────────────────── */
-.accordion { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; }
+.accordion { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 12px !important; backdrop-filter: blur(12px) !important; }
 
 /* ── Dropdowns ────────────────────────────────────────── */
 select, .dropdown { background: var(--bg-panel) !important; border-color: var(--border) !important; color: var(--text) !important; }
@@ -155,50 +166,60 @@ select, .dropdown { background: var(--bg-panel) !important; border-color: var(--
 /* ── Stat textboxes ───────────────────────────────────── */
 #stat-step textarea, #stat-score textarea, #stat-req textarea {
   font-family: 'Orbitron', sans-serif !important;
-  font-size: 1.3rem !important;
-  font-weight: 700 !important;
-  color: var(--cyan) !important;
+  font-size: 1.5rem !important;
+  font-weight: 900 !important;
+  color: #fff !important;
+  text-shadow: var(--glow-c) !important;
   text-align: center !important;
+  background: rgba(0, 229, 255, 0.05) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+  box-shadow: inset 0 0 15px rgba(0, 229, 255, 0.1) !important;
 }
 
 /* ── Action log ───────────────────────────────────────── */
 #action-log textarea {
   font-size: .76rem !important;
-  line-height: 1.55 !important;
-  min-height: 240px !important;
+  line-height: 1.6 !important;
+  min-height: 250px !important;
+  background: rgba(0,0,0,0.3) !important;
 }
 
 /* ── API key panel ────────────────────────────────────── */
-.api-key-note {
-  font-size: .72rem;
-  color: var(--muted);
-  line-height: 1.6;
-  padding: 8px 0 4px 0;
-}
+.api-key-note { font-size: .75rem; color: var(--muted); line-height: 1.6; padding: 8px 0 4px 0; }
 
 /* ── Scrollbar ────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(42, 114, 214, 0.5); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
 
 /* ── Orbit container ──────────────────────────────────── */
 #orbit-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 540px;
-  background: #060b16;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  min-height: 560px;
+  background: radial-gradient(circle at center, rgba(13, 71, 161, 0.2) 0%, rgba(0,0,0,0) 70%) !important;
+  border: 1px solid rgba(42, 114, 214, 0.2);
+  border-radius: 16px;
+  box-shadow: inset 0 0 30px rgba(33, 150, 243, 0.1);
+  position: relative;
 }
 
+/* Add a pulse to the orbit container border */
+@keyframes border-pulse {
+  0% { border-color: rgba(42, 114, 214, 0.2); box-shadow: inset 0 0 30px rgba(33, 150, 243, 0.1); }
+  50% { border-color: rgba(0, 229, 255, 0.5); box-shadow: inset 0 0 50px rgba(0, 229, 255, 0.2); }
+  100% { border-color: rgba(42, 114, 214, 0.2); box-shadow: inset 0 0 30px rgba(33, 150, 243, 0.1); }
+}
+#orbit-container { animation: border-pulse 4s infinite ease-in-out; }
+
 /* ── Grade badge ──────────────────────────────────────── */
-.grade-s { color: #ffd700 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
-.grade-a { color: #00e676 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
+.grade-s { color: #ffd700 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; text-shadow: 0 0 10px #ffd700 !important; }
+.grade-a { color: #00e676 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; text-shadow: 0 0 10px #00e676 !important; }
 .grade-b { color: #2196f3 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
 .grade-c { color: #ffab40 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
-.grade-f { color: #ff1744 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; }
+.grade-f { color: #ff1744 !important; font-family: 'Orbitron', sans-serif; font-weight: 900; text-shadow: 0 0 10px #ff1744 !important; }
 """
 
 HEADER_HTML = """
@@ -207,7 +228,7 @@ HEADER_HTML = """
               background:linear-gradient(130deg,#00e5ff 0%,#2196f3 45%,#7c4dff 100%);
               -webkit-background-clip:text; -webkit-text-fill-color:transparent;
               letter-spacing:.12em; margin-bottom:6px; line-height:1.1;">
-    🛰&nbsp; ORBITAL COMMAND
+    ORBITAL COMMAND
   </div>
   <div style="font-family:'Orbitron',sans-serif; font-size:.72rem; color:#4a6888;
               letter-spacing:.36em; text-transform:uppercase;">
@@ -223,7 +244,7 @@ API_KEY_HTML = """
   &nbsp;2. <b>Create a <code>.env</code> file</b> in the project root (copy <code>.env.example</code>).<br>
   &nbsp;3. <b>Set OS environment variables</b> before launching the app.
   <br><br>
-  <b style="color:#4ade80;">&#10024; Google Gemini (recommended — free tier available):</b><br>
+  <b style="color:#4ade80;">Google Gemini (recommended — free tier available):</b><br>
   &nbsp;→ <code>GOOGLE_API_KEY</code> &nbsp;&nbsp; Get it free at
   <code>aistudio.google.com/app/apikey</code><br>
   &nbsp;&nbsp;&nbsp; Models: <code>gemini-2.0-flash</code> (fast/cheap) &nbsp;·&nbsp;
@@ -268,12 +289,12 @@ def _format_telemetry_md(obs: Observation) -> str:
     rows = ["| Satellite | Pos | Bat % | Stor % | Fuel % | Temp ° | Health | Mode | LoS |",
             "|-----------|-----|-------|--------|--------|--------|--------|------|-----|"]
     for sat in obs.satellites:
-        def sym(v, lo, hi): return "🟢" if v < lo else ("🟡" if v < hi else "🔴")
+        def sym(v, lo, hi): return "[OK] " if v < lo else ("[WARN] " if v < hi else "[CRIT] ")
         b  = sym(sat.battery_level,  50, 80)   # green if high is good → invert
-        b  = "🟢" if sat.battery_level>=50 else ("🟡" if sat.battery_level>=20 else "🔴")
-        st = "🟢" if sat.storage_used<70  else ("🟡" if sat.storage_used<90  else "🔴")
-        tp = "🟢" if sat.thermal_level<60 else ("🟡" if sat.thermal_level<80 else "🔴")
-        hp = "🟢" if sat.health_index>=90 else ("🟡" if sat.health_index>=70 else "🔴")
+        b  = "[OK] " if sat.battery_level>=50 else ("[WARN] " if sat.battery_level>=20 else "[CRIT] ")
+        st = "[OK] " if sat.storage_used<70  else ("[WARN] " if sat.storage_used<90  else "[CRIT] ")
+        tp = "[OK] " if sat.thermal_level<60 else ("[WARN] " if sat.thermal_level<80 else "[CRIT] ")
+        hp = "[OK] " if sat.health_index>=90 else ("[WARN] " if sat.health_index>=70 else "[CRIT] ")
         los = sat.line_of_sight_to_ground or "—"
         rows.append(
             f"| `{sat.sat_id}` | {sat.orbital_position}° | {b}{sat.battery_level:.0f} | "
@@ -286,12 +307,12 @@ def _format_telemetry_md(obs: Observation) -> str:
 
 def _format_requests_md(obs: Observation) -> str:
     if not obs.imaging_requests:
-        return "✅ No pending requests — all fulfilled or expired."
+        return "No pending requests — all fulfilled or expired."
     rows = ["| ID | Target | Eff. Reward | Priority | Deadline | Status |",
             "|----|--------|-------------|----------|----------|--------|"]
     for req in sorted(obs.imaging_requests,
                       key=lambda r: {"EMERGENCY": 0, "URGENT": 1, "ROUTINE": 2}[r.priority]):
-        icon = {"EMERGENCY": "🚨", "URGENT": "⚠️", "ROUTINE": "📋"}.get(req.priority, "")
+        icon = {"EMERGENCY": "[EMERGENCY]", "URGENT": "[URGENT] ", "ROUTINE": "[ROUTINE] "}.get(req.priority, "")
         dl   = f"min {req.deadline_minute}" if req.deadline_minute else "—"
         assigned = f"→ {req.assigned_to}" if req.assigned_to else "unassigned"
         rows.append(f"| `{req.id}` | {req.target_deg}° | **{req.effective_reward:.0f}** | "
@@ -304,9 +325,9 @@ def _format_events_md(obs: Observation) -> str:
         return "*No active events — nominal operations.*"
     parts = []
     for ev in obs.active_events:
-        icon = {"solar_flare": "☀️⚡", "ground_outage": "📡🌨️",
-                "priority_escalation": "🚨", "atmospheric_drag": "🌫️",
-                "bandwidth_congestion": "📡🔴"}.get(ev.event_type.value, "⚠️")
+        icon = {"solar_flare": "[SOLAR FLARE]", "ground_outage": "[GROUND OUTAGE]",
+                "priority_escalation": "[EMERGENCY]", "atmospheric_drag": "[DRAG]",
+                "bandwidth_congestion": "[CRIT] "}.get(ev.event_type.value, "[URGENT] ")
         parts.append(f"- {icon} **{ev.event_type.value.replace('_',' ').upper()}**: "
                      f"{ev.description} *(+{ev.steps_remaining} steps, ×{ev.magnitude:.2f})*")
     return "\n".join(parts)
@@ -397,8 +418,8 @@ def _apply_api_keys(gemini_key: str, hf_token: str) -> str:
         os.environ["HF_TOKEN"] = hf_token.strip()
         changed.append("HF_TOKEN")
     if changed:
-        return f"✅ Saved to environment: {', '.join(changed)}"
-    return "ℹ️ No new keys entered — existing environment kept."
+        return f"Saved to environment: {', '.join(changed)}"
+    return "No new keys entered — existing environment kept."
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +439,7 @@ def on_reset(task_choice: str, backend_choice: str, decentralized: bool, state: 
         agent = create_agent(backend, decentralized=decentralized)
     except Exception as ex:
         return (state, f"<div style='color:#ff1744; padding:40px; font-family:monospace;'>"
-                f"❌ Reset failed:<br><pre>{ex}</pre></div>",
+                f"Reset failed:<br><pre>{ex}</pre></div>",
                 *_EMPTY_OUTPUTS)
 
     state.update({"env": env, "agent": agent, "obs": obs,
@@ -434,7 +455,7 @@ def on_reset(task_choice: str, backend_choice: str, decentralized: bool, state: 
         _format_telemetry_md(obs),
         _format_requests_md(obs),
         _format_events_md(obs),
-        "**Episode reset.** Press ▶ STEP or ⚡ RUN to begin.",
+        "**Episode reset.** Press RUN STEP or RUN to begin.",
         obs.task_description,
         "0", "0.0", f"0 / {len(obs.imaging_requests)}",
         plot, _build_sparkline([]), "",
@@ -443,13 +464,13 @@ def on_reset(task_choice: str, backend_choice: str, decentralized: bool, state: 
 
 def on_step(state: Dict) -> Tuple:
     if state.get("done"):
-        return _build_outputs(state, extra_log_prefix="🏁 Episode already finished. Press RESET.\n\n")
+        return _build_outputs(state, extra_log_prefix="Episode already finished. Press RESET.\n\n")
 
     env: OrbitalEnv    = state.get("env")
     agent: BaseAgent   = state.get("agent")
     obs: Observation   = state.get("obs")
     if env is None or obs is None:
-        return (state, "<div style='color:#ffab40;padding:40px;'>⚠ Press RESET first.</div>",
+        return (state, "<div style='color:#ffab40;padding:40px;'>Press RESET first.</div>",
                 *_EMPTY_OUTPUTS)
 
     try:
@@ -478,8 +499,8 @@ def on_step(state: Dict) -> Tuple:
             think = (act.reasoning or "")[:130]
             log   = (f"[{state['step']:03d}] {act.action_type.value:<22} → {act.target_sat_id:<14}"
                      f"  {reward:+7.1f} pts\n"
-                     f"   💭 {think}\n"
-                     f"   ↳  {msg}\n")
+                     f"   Reason: {think}\n"
+                     f"   Result: {msg}\n")
             state["action_log"].append(log)
     else:
         ar    = ars[0] if ars else info.get("action_result", {})
@@ -487,15 +508,15 @@ def on_step(state: Dict) -> Tuple:
         think = (action.reasoning or "")[:130]
         log   = (f"[{state['step']:03d}] {action.action_type.value:<22} → {action.target_sat_id:<14}"
                  f"  {reward:+7.1f} pts\n"
-                 f"   💭 {think}\n"
-                 f"   ↳  {msg}\n")
+                 f"   Reason: {think}\n"
+                 f"   Result: {msg}\n")
         state["action_log"].append(log)
 
     if state["done"]:
         result = env.get_episode_result()
         submit_result(result, agent_name=agent.name,
                       model_name=getattr(agent, "model", "RuleBased"))
-        prefix = (f"🏁 EPISODE COMPLETE  —  Grade: {result.grade}  "
+        prefix = (f"EPISODE COMPLETE  —  Grade: {result.grade}  "
                   f"Score: {result.final_score:.1f}  "
                   f"({result.satellites_survived}/{result.total_satellites} sats alive)\n\n")
     else:
@@ -550,15 +571,15 @@ def build_ui() -> gr.Blocks:
         gr.HTML(HEADER_HTML)
 
         # ── API Key accordion (prominent, near top) ─────────────────────────
-        with gr.Accordion("🔐  API Keys & LLM Configuration", open=False):
+        with gr.Accordion("API Keys & LLM Configuration", open=False):
             gr.HTML(API_KEY_HTML)
             gr.HTML('<div style="font-family:JetBrains Mono,monospace; font-size:.72rem; '
                     'color:#4ade80; padding:6px 0 8px 0;">'
-                    '✨ Google Gemini — recommended (free tier) &nbsp;·&nbsp; '
+                    'Google Gemini — recommended (free tier) &nbsp;·&nbsp; '
                     'get key at <b>aistudio.google.com/app/apikey</b></div>')
             with gr.Row():
                 gemini_key = gr.Textbox(
-                    label="✨ Google API Key  (Gemini)",
+                    label="Google API Key  (Gemini)",
                     placeholder="AIza...",
                     type="password",
                     value=os.environ.get("GOOGLE_API_KEY",
@@ -579,7 +600,7 @@ def build_ui() -> gr.Blocks:
                     value="gemini-2.0-flash",
                     scale=4,
                 )
-                save_keys_btn  = gr.Button("💾  Save Keys to Session", variant="primary", scale=2)
+                save_keys_btn  = gr.Button("Save Keys to Session", variant="primary", scale=2)
                 key_status_txt = gr.Textbox(label="Status", interactive=False, scale=4, max_lines=1)
             save_keys_btn.click(
                 _apply_api_keys,
@@ -591,25 +612,25 @@ def build_ui() -> gr.Blocks:
         with gr.Row():
             task_dd    = gr.Dropdown(choices=list(TASK_NAMES.values()),
                                      value=list(TASK_NAMES.values())[0],
-                                     label="📋  Task", scale=3)
+                                     label="Task", scale=3)
             backend_dd = gr.Dropdown(choices=list(BACKEND_OPTIONS.keys()),
                                      value=list(BACKEND_OPTIONS.keys())[0],
-                                     label="🤖  LLM Backend", scale=3)
-            decentralized_cb = gr.Checkbox(label="🔗 Swarm Mode", value=False, scale=1)
-            reset_btn  = gr.Button("🔄  RESET",  variant="primary", scale=1)
-            step_btn   = gr.Button("▶  STEP",   variant="primary", scale=1)
+                                     label="LLM Backend", scale=3)
+            decentralized_cb = gr.Checkbox(label="Swarm Mode", value=False, scale=1)
+            reset_btn  = gr.Button("RESET",  variant="primary", scale=1)
+            step_btn   = gr.Button("STEP",   variant="primary", scale=1)
             run_slider = gr.Slider(5, 200, value=50, step=5, label="Auto-steps", scale=2)
-            run_btn    = gr.Button("⚡  RUN",    variant="primary", scale=1)
+            run_btn    = gr.Button("RUN",    variant="primary", scale=1)
 
         # ── Stats bar ────────────────────────────────────────────────────────
         with gr.Row():
-            step_out  = gr.Textbox("0",   label="📌  Step",      interactive=False,
+            step_out  = gr.Textbox("0",   label="Step",      interactive=False,
                                    scale=1, max_lines=1, elem_id="stat-step")
-            score_out = gr.Textbox("0.0", label="⭐  Score",     interactive=False,
+            score_out = gr.Textbox("0.0", label="Score",     interactive=False,
                                    scale=1, max_lines=1, elem_id="stat-score")
-            req_out   = gr.Textbox("0/0", label="📷  Requests",  interactive=False,
+            req_out   = gr.Textbox("0/0", label="Requests",  interactive=False,
                                    scale=1, max_lines=1, elem_id="stat-req")
-            obj_out   = gr.Textbox("",    label="📋  Objective", interactive=False,
+            obj_out   = gr.Textbox("",    label="Objective", interactive=False,
                                    scale=5, max_lines=2)
 
         # ── Main split ──────────────────────────────────────────────────────
@@ -620,17 +641,17 @@ def build_ui() -> gr.Blocks:
 
             # Right — panels
             with gr.Column(scale=3):
-                with gr.Tab("🛰 Telemetry"):
+                with gr.Tab("Telemetry"):
                     telemetry_md = gr.Markdown("*Waiting for reset…*")
-                with gr.Tab("🎯 Requests"):
+                with gr.Tab("Requests"):
                     requests_md = gr.Markdown("*Waiting for reset…*")
-                with gr.Tab("⚡ Events"):
+                with gr.Tab("Events"):
                     events_md = gr.Markdown("*Nominal.*")
 
         # ── Reward chart + action log ────────────────────────────────────────
         with gr.Row():
             with gr.Column(scale=2):
-                gr.Markdown("### 📈  Reward History")
+                gr.Markdown("### Reward History")
                 if _PLOTLY:
                     reward_plot = gr.Plot(label="")
                 else:
@@ -638,17 +659,17 @@ def build_ui() -> gr.Blocks:
                 reward_spark = gr.Markdown("*No data.*")
 
             with gr.Column(scale=3):
-                gr.Markdown("### 📜  Action Log")
+                gr.Markdown("### Action Log")
                 action_log = gr.Textbox(
                     value="", lines=14, max_lines=18,
                     interactive=False, elem_id="action-log", label="",
                 )
 
         # ── Leaderboard ──────────────────────────────────────────────────────
-        with gr.Accordion("🏆  Leaderboard", open=False):
+        with gr.Accordion("Leaderboard", open=False):
             lb_md = gr.Markdown("*Run an episode to populate this.*")
             with gr.Row():
-                lb_refresh = gr.Button("🔄  Refresh", scale=1)
+                lb_refresh = gr.Button("Refresh", scale=1)
                 lb_task_filter = gr.Dropdown(
                     choices=["All Tasks"] + [f"Task {i}" for i in range(1, 6)],
                     value="All Tasks", label="Filter by task", scale=2,
@@ -658,14 +679,31 @@ def build_ui() -> gr.Blocks:
                 return _format_leaderboard_md(tid)
             lb_refresh.click(_refresh_lb, inputs=[lb_task_filter], outputs=[lb_md])
 
-        # ── Footer ──────────────────────────────────────────────────────────
+        # ── Footer & JS Injection ───────────────────────────────────────────
         gr.HTML("""
         <div style="text-align:center; padding:14px 0 6px 0;
-                    font-size:.68rem; color:#2a3f5a; font-family:JetBrains Mono,monospace;">
+                    font-size:.68rem; color:rgba(255,255,255,0.4); font-family:JetBrains Mono,monospace;">
           OpenEnv-Orbital-Command &nbsp;·&nbsp;
-          <a href="https://github.com" style="color:#2a3f5a;">GitHub</a> &nbsp;·&nbsp;
+          <a href="https://github.com" style="color:#2196f3;">GitHub</a> &nbsp;·&nbsp;
           Deterministic LEO Simulation — pure numpy, runs on 2 vCPU / 4 GB RAM
         </div>
+        <script>
+        // Auto-Spin the Plotly Earth Globe continuously!
+        if(!window.spinInterval) {
+            window.spinInterval = setInterval(() => {
+                const el = document.getElementById("orbit-container");
+                if (el) {
+                    const plots = el.getElementsByClassName("js-plotly-plot");
+                    if (plots.length > 0 && plots[0].layout && plots[0].layout.geo) {
+                        const p = plots[0];
+                        let lon = p.layout.geo.center.lon || 0;
+                        lon = (lon + 0.3) % 360;  // Smoothly increment longitude
+                        Plotly.relayout(p, {"geo.center.lon": lon});
+                    }
+                }
+            }, 50); // Updates every ~50ms
+        }
+        </script>
         """)
 
         # ── Output list (must match every callback's return) ──────────────
@@ -697,14 +735,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(f"\n{'═'*55}")
-    print(f"  🛰  ORBITAL COMMAND — launching on port {args.port}")
+    print(f"   ORBITAL COMMAND — launching on port {args.port}")
     print(f"{'═'*55}")
     print(f"  Default backend: {args.backend}")
     print(f"  API keys loaded from environment:")
     for key in ["GOOGLE_API_KEY", "HF_TOKEN"]:
         val = os.environ.get(key, "")
         masked = (val[:6] + "..." + val[-3:]) if len(val) > 12 else ("(not set)" if not val else "(set)")
-        star = " ★" if key == "GOOGLE_API_KEY" else ""
+        star = " *" if key == "GOOGLE_API_KEY" else ""
         print(f"    {key}: {masked}{star}")
     print(f"{'\u2550'*55}\n")
 

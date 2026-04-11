@@ -42,7 +42,7 @@ def generate_orbit_3d(
         lon=eclipse_lons,
         lat=[0]*len(eclipse_lons),
         mode="lines",
-        line=dict(width=10, color="rgba(10, 20, 35, 0.8)"),
+        line=dict(width=16, color="rgba(5, 5, 10, 0.7)"),
         name="Eclipse Zone",
         hoverinfo="skip"
     ))
@@ -119,14 +119,17 @@ def generate_orbit_3d(
 
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor="#060b16",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         geo=dict(
             projection_type="orthographic",
-            showland=True, landcolor="#111e33",
-            showocean=True, oceancolor="#070d1a",
-            showcountries=True, countrycolor="#1c2f4a",
-            showlakes=True, lakecolor="#070d1a",
-            bgcolor="#060b16",
+            showland=True, landcolor="rgba(17, 30, 51, 0.3)",
+            showocean=True, oceancolor="rgba(7, 13, 26, 0.05)",
+            showcountries=True, countrycolor="rgba(42, 114, 214, 0.4)",
+            showcoastlines=True, coastlinecolor="rgba(42, 114, 214, 0.7)",
+            showlakes=True, lakecolor="rgba(7, 13, 26, 0.05)",
+            showframe=True, framecolor="rgba(42, 114, 214, 0.3)", framewidth=2,
+            bgcolor="rgba(0,0,0,0)",
             center=dict(lon_0=sat_lons[0] if sat_lons else 0, lat_0=0) # Track the first satellite
         ),
         showlegend=False,
