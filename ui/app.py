@@ -4,7 +4,7 @@ OpenEnv-Orbital-Command | ui/app.py
 Gradio 6.x mission control dashboard.
 
 API KEYS — Three ways to configure (in order of priority):
-  1. Type them directly in the '🔐 API Keys' section of the UI (not saved to disk)
+  1. Type them directly in the ' API Keys' section of the UI (not saved to disk)
   2. Create a `.env` file in the project root (copy `.env.example`)
   3. Set OS environment variables before launching
 
@@ -54,17 +54,17 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 TASK_NAMES = {
-    1: "☀️  Task 1 — Eclipse Survival  [Easy]",
-    2: "💾  Task 2 — Storage Bottleneck  [Medium]",
-    3: "🔗  Task 3 — Laser Cross-Link  [Hard]",
-    4: "🌐  Task 4 — Swarm Harvest  [Very Hard]",
-    5: "🚨  Task 5 — Emergency Response  [Expert]",
+    1: "Task 1 — Eclipse Survival  [Easy]",
+    2: "Task 2 — Storage Bottleneck  [Medium]",
+    3: "Task 3 — Laser Cross-Link  [Hard]",
+    4: "Task 4 — Swarm Harvest  [Very Hard]",
+    5: "Task 5 — Emergency Response  [Expert]",
 }
 
 BACKEND_OPTIONS = {
-    "✨  Gemini  (gemini-2.0-flash / 1.5-pro)": "gemini",
-    "🤖  Rule-Based (No API key)":              "rule_based",
-    "🤗  HuggingFace Inference API":            "huggingface",
+    "Gemini  (gemini-2.0-flash / 1.5-pro)": "gemini",
+    "Rule-Based (No API key)":              "rule_based",
+    "HuggingFace Inference API":            "huggingface",
 }
 
 MODEL_DEFAULTS = {
@@ -228,7 +228,7 @@ HEADER_HTML = """
               background:linear-gradient(130deg,#00e5ff 0%,#2196f3 45%,#7c4dff 100%);
               -webkit-background-clip:text; -webkit-text-fill-color:transparent;
               letter-spacing:.12em; margin-bottom:6px; line-height:1.1;">
-    🛰&nbsp; ORBITAL COMMAND
+    ORBITAL COMMAND
   </div>
   <div style="font-family:'Orbitron',sans-serif; font-size:.72rem; color:#4a6888;
               letter-spacing:.36em; text-transform:uppercase;">
@@ -244,7 +244,7 @@ API_KEY_HTML = """
   &nbsp;2. <b>Create a <code>.env</code> file</b> in the project root (copy <code>.env.example</code>).<br>
   &nbsp;3. <b>Set OS environment variables</b> before launching the app.
   <br><br>
-  <b style="color:#4ade80;">&#10024; Google Gemini (recommended — free tier available):</b><br>
+  <b style="color:#4ade80;">Google Gemini (recommended — free tier available):</b><br>
   &nbsp;→ <code>GOOGLE_API_KEY</code> &nbsp;&nbsp; Get it free at
   <code>aistudio.google.com/app/apikey</code><br>
   &nbsp;&nbsp;&nbsp; Models: <code>gemini-2.0-flash</code> (fast/cheap) &nbsp;·&nbsp;
@@ -289,12 +289,12 @@ def _format_telemetry_md(obs: Observation) -> str:
     rows = ["| Satellite | Pos | Bat % | Stor % | Fuel % | Temp ° | Health | Mode | LoS |",
             "|-----------|-----|-------|--------|--------|--------|--------|------|-----|"]
     for sat in obs.satellites:
-        def sym(v, lo, hi): return "🟢" if v < lo else ("🟡" if v < hi else "🔴")
+        def sym(v, lo, hi): return "[OK] " if v < lo else ("[WARN] " if v < hi else "[CRIT] ")
         b  = sym(sat.battery_level,  50, 80)   # green if high is good → invert
-        b  = "🟢" if sat.battery_level>=50 else ("🟡" if sat.battery_level>=20 else "🔴")
-        st = "🟢" if sat.storage_used<70  else ("🟡" if sat.storage_used<90  else "🔴")
-        tp = "🟢" if sat.thermal_level<60 else ("🟡" if sat.thermal_level<80 else "🔴")
-        hp = "🟢" if sat.health_index>=90 else ("🟡" if sat.health_index>=70 else "🔴")
+        b  = "[OK] " if sat.battery_level>=50 else ("[WARN] " if sat.battery_level>=20 else "[CRIT] ")
+        st = "[OK] " if sat.storage_used<70  else ("[WARN] " if sat.storage_used<90  else "[CRIT] ")
+        tp = "[OK] " if sat.thermal_level<60 else ("[WARN] " if sat.thermal_level<80 else "[CRIT] ")
+        hp = "[OK] " if sat.health_index>=90 else ("[WARN] " if sat.health_index>=70 else "[CRIT] ")
         los = sat.line_of_sight_to_ground or "—"
         rows.append(
             f"| `{sat.sat_id}` | {sat.orbital_position}° | {b}{sat.battery_level:.0f} | "
@@ -307,12 +307,12 @@ def _format_telemetry_md(obs: Observation) -> str:
 
 def _format_requests_md(obs: Observation) -> str:
     if not obs.imaging_requests:
-        return "✅ No pending requests — all fulfilled or expired."
+        return "No pending requests — all fulfilled or expired."
     rows = ["| ID | Target | Eff. Reward | Priority | Deadline | Status |",
             "|----|--------|-------------|----------|----------|--------|"]
     for req in sorted(obs.imaging_requests,
                       key=lambda r: {"EMERGENCY": 0, "URGENT": 1, "ROUTINE": 2}[r.priority]):
-        icon = {"EMERGENCY": "🚨", "URGENT": "⚠️", "ROUTINE": "📋"}.get(req.priority, "")
+        icon = {"EMERGENCY": "[EMERGENCY]", "URGENT": "[URGENT] ", "ROUTINE": "[ROUTINE] "}.get(req.priority, "")
         dl   = f"min {req.deadline_minute}" if req.deadline_minute else "—"
         assigned = f"→ {req.assigned_to}" if req.assigned_to else "unassigned"
         rows.append(f"| `{req.id}` | {req.target_deg}° | **{req.effective_reward:.0f}** | "
@@ -325,9 +325,9 @@ def _format_events_md(obs: Observation) -> str:
         return "*No active events — nominal operations.*"
     parts = []
     for ev in obs.active_events:
-        icon = {"solar_flare": "☀️⚡", "ground_outage": "📡🌨️",
-                "priority_escalation": "🚨", "atmospheric_drag": "🌫️",
-                "bandwidth_congestion": "📡🔴"}.get(ev.event_type.value, "⚠️")
+        icon = {"solar_flare": "[SOLAR FLARE]", "ground_outage": "[GROUND OUTAGE]",
+                "priority_escalation": "[EMERGENCY]", "atmospheric_drag": "[DRAG]",
+                "bandwidth_congestion": "[CRIT] "}.get(ev.event_type.value, "[URGENT] ")
         parts.append(f"- {icon} **{ev.event_type.value.replace('_',' ').upper()}**: "
                      f"{ev.description} *(+{ev.steps_remaining} steps, ×{ev.magnitude:.2f})*")
     return "\n".join(parts)
@@ -418,8 +418,8 @@ def _apply_api_keys(gemini_key: str, hf_token: str) -> str:
         os.environ["HF_TOKEN"] = hf_token.strip()
         changed.append("HF_TOKEN")
     if changed:
-        return f"✅ Saved to environment: {', '.join(changed)}"
-    return "ℹ️ No new keys entered — existing environment kept."
+        return f"Saved to environment: {', '.join(changed)}"
+    return "No new keys entered — existing environment kept."
 
 
 # ---------------------------------------------------------------------------
@@ -439,7 +439,7 @@ def on_reset(task_choice: str, backend_choice: str, decentralized: bool, state: 
         agent = create_agent(backend, decentralized=decentralized)
     except Exception as ex:
         return (state, f"<div style='color:#ff1744; padding:40px; font-family:monospace;'>"
-                f"❌ Reset failed:<br><pre>{ex}</pre></div>",
+                f"Reset failed:<br><pre>{ex}</pre></div>",
                 *_EMPTY_OUTPUTS)
 
     state.update({"env": env, "agent": agent, "obs": obs,
@@ -455,7 +455,7 @@ def on_reset(task_choice: str, backend_choice: str, decentralized: bool, state: 
         _format_telemetry_md(obs),
         _format_requests_md(obs),
         _format_events_md(obs),
-        "**Episode reset.** Press ▶ STEP or ⚡ RUN to begin.",
+        "**Episode reset.** Press RUN STEP or RUN to begin.",
         obs.task_description,
         "0", "0.0", f"0 / {len(obs.imaging_requests)}",
         plot, _build_sparkline([]), "",
@@ -464,13 +464,13 @@ def on_reset(task_choice: str, backend_choice: str, decentralized: bool, state: 
 
 def on_step(state: Dict) -> Tuple:
     if state.get("done"):
-        return _build_outputs(state, extra_log_prefix="🏁 Episode already finished. Press RESET.\n\n")
+        return _build_outputs(state, extra_log_prefix="Episode already finished. Press RESET.\n\n")
 
     env: OrbitalEnv    = state.get("env")
     agent: BaseAgent   = state.get("agent")
     obs: Observation   = state.get("obs")
     if env is None or obs is None:
-        return (state, "<div style='color:#ffab40;padding:40px;'>⚠ Press RESET first.</div>",
+        return (state, "<div style='color:#ffab40;padding:40px;'>Press RESET first.</div>",
                 *_EMPTY_OUTPUTS)
 
     try:
@@ -499,8 +499,8 @@ def on_step(state: Dict) -> Tuple:
             think = (act.reasoning or "")[:130]
             log   = (f"[{state['step']:03d}] {act.action_type.value:<22} → {act.target_sat_id:<14}"
                      f"  {reward:+7.1f} pts\n"
-                     f"   💭 {think}\n"
-                     f"   ↳  {msg}\n")
+                     f"   Reason: {think}\n"
+                     f"   Result: {msg}\n")
             state["action_log"].append(log)
     else:
         ar    = ars[0] if ars else info.get("action_result", {})
@@ -508,15 +508,15 @@ def on_step(state: Dict) -> Tuple:
         think = (action.reasoning or "")[:130]
         log   = (f"[{state['step']:03d}] {action.action_type.value:<22} → {action.target_sat_id:<14}"
                  f"  {reward:+7.1f} pts\n"
-                 f"   💭 {think}\n"
-                 f"   ↳  {msg}\n")
+                 f"   Reason: {think}\n"
+                 f"   Result: {msg}\n")
         state["action_log"].append(log)
 
     if state["done"]:
         result = env.get_episode_result()
         submit_result(result, agent_name=agent.name,
                       model_name=getattr(agent, "model", "RuleBased"))
-        prefix = (f"🏁 EPISODE COMPLETE  —  Grade: {result.grade}  "
+        prefix = (f"EPISODE COMPLETE  —  Grade: {result.grade}  "
                   f"Score: {result.final_score:.1f}  "
                   f"({result.satellites_survived}/{result.total_satellites} sats alive)\n\n")
     else:
@@ -571,15 +571,15 @@ def build_ui() -> gr.Blocks:
         gr.HTML(HEADER_HTML)
 
         # ── API Key accordion (prominent, near top) ─────────────────────────
-        with gr.Accordion("🔐  API Keys & LLM Configuration", open=False):
+        with gr.Accordion("API Keys & LLM Configuration", open=False):
             gr.HTML(API_KEY_HTML)
             gr.HTML('<div style="font-family:JetBrains Mono,monospace; font-size:.72rem; '
                     'color:#4ade80; padding:6px 0 8px 0;">'
-                    '✨ Google Gemini — recommended (free tier) &nbsp;·&nbsp; '
+                    'Google Gemini — recommended (free tier) &nbsp;·&nbsp; '
                     'get key at <b>aistudio.google.com/app/apikey</b></div>')
             with gr.Row():
                 gemini_key = gr.Textbox(
-                    label="✨ Google API Key  (Gemini)",
+                    label="Google API Key  (Gemini)",
                     placeholder="AIza...",
                     type="password",
                     value=os.environ.get("GOOGLE_API_KEY",
@@ -600,7 +600,7 @@ def build_ui() -> gr.Blocks:
                     value="gemini-2.0-flash",
                     scale=4,
                 )
-                save_keys_btn  = gr.Button("💾  Save Keys to Session", variant="primary", scale=2)
+                save_keys_btn  = gr.Button("Save Keys to Session", variant="primary", scale=2)
                 key_status_txt = gr.Textbox(label="Status", interactive=False, scale=4, max_lines=1)
             save_keys_btn.click(
                 _apply_api_keys,
@@ -612,25 +612,25 @@ def build_ui() -> gr.Blocks:
         with gr.Row():
             task_dd    = gr.Dropdown(choices=list(TASK_NAMES.values()),
                                      value=list(TASK_NAMES.values())[0],
-                                     label="📋  Task", scale=3)
+                                     label="Task", scale=3)
             backend_dd = gr.Dropdown(choices=list(BACKEND_OPTIONS.keys()),
                                      value=list(BACKEND_OPTIONS.keys())[0],
-                                     label="🤖  LLM Backend", scale=3)
-            decentralized_cb = gr.Checkbox(label="🔗 Swarm Mode", value=False, scale=1)
-            reset_btn  = gr.Button("🔄  RESET",  variant="primary", scale=1)
-            step_btn   = gr.Button("▶  STEP",   variant="primary", scale=1)
+                                     label="LLM Backend", scale=3)
+            decentralized_cb = gr.Checkbox(label="Swarm Mode", value=False, scale=1)
+            reset_btn  = gr.Button("RESET",  variant="primary", scale=1)
+            step_btn   = gr.Button("STEP",   variant="primary", scale=1)
             run_slider = gr.Slider(5, 200, value=50, step=5, label="Auto-steps", scale=2)
-            run_btn    = gr.Button("⚡  RUN",    variant="primary", scale=1)
+            run_btn    = gr.Button("RUN",    variant="primary", scale=1)
 
         # ── Stats bar ────────────────────────────────────────────────────────
         with gr.Row():
-            step_out  = gr.Textbox("0",   label="📌  Step",      interactive=False,
+            step_out  = gr.Textbox("0",   label="Step",      interactive=False,
                                    scale=1, max_lines=1, elem_id="stat-step")
-            score_out = gr.Textbox("0.0", label="⭐  Score",     interactive=False,
+            score_out = gr.Textbox("0.0", label="Score",     interactive=False,
                                    scale=1, max_lines=1, elem_id="stat-score")
-            req_out   = gr.Textbox("0/0", label="📷  Requests",  interactive=False,
+            req_out   = gr.Textbox("0/0", label="Requests",  interactive=False,
                                    scale=1, max_lines=1, elem_id="stat-req")
-            obj_out   = gr.Textbox("",    label="📋  Objective", interactive=False,
+            obj_out   = gr.Textbox("",    label="Objective", interactive=False,
                                    scale=5, max_lines=2)
 
         # ── Main split ──────────────────────────────────────────────────────
@@ -641,17 +641,17 @@ def build_ui() -> gr.Blocks:
 
             # Right — panels
             with gr.Column(scale=3):
-                with gr.Tab("🛰 Telemetry"):
+                with gr.Tab("Telemetry"):
                     telemetry_md = gr.Markdown("*Waiting for reset…*")
-                with gr.Tab("🎯 Requests"):
+                with gr.Tab("Requests"):
                     requests_md = gr.Markdown("*Waiting for reset…*")
-                with gr.Tab("⚡ Events"):
+                with gr.Tab("Events"):
                     events_md = gr.Markdown("*Nominal.*")
 
         # ── Reward chart + action log ────────────────────────────────────────
         with gr.Row():
             with gr.Column(scale=2):
-                gr.Markdown("### 📈  Reward History")
+                gr.Markdown("### Reward History")
                 if _PLOTLY:
                     reward_plot = gr.Plot(label="")
                 else:
@@ -659,17 +659,17 @@ def build_ui() -> gr.Blocks:
                 reward_spark = gr.Markdown("*No data.*")
 
             with gr.Column(scale=3):
-                gr.Markdown("### 📜  Action Log")
+                gr.Markdown("### Action Log")
                 action_log = gr.Textbox(
                     value="", lines=14, max_lines=18,
                     interactive=False, elem_id="action-log", label="",
                 )
 
         # ── Leaderboard ──────────────────────────────────────────────────────
-        with gr.Accordion("🏆  Leaderboard", open=False):
+        with gr.Accordion("Leaderboard", open=False):
             lb_md = gr.Markdown("*Run an episode to populate this.*")
             with gr.Row():
-                lb_refresh = gr.Button("🔄  Refresh", scale=1)
+                lb_refresh = gr.Button("Refresh", scale=1)
                 lb_task_filter = gr.Dropdown(
                     choices=["All Tasks"] + [f"Task {i}" for i in range(1, 6)],
                     value="All Tasks", label="Filter by task", scale=2,
@@ -735,14 +735,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(f"\n{'═'*55}")
-    print(f"  🛰  ORBITAL COMMAND — launching on port {args.port}")
+    print(f"   ORBITAL COMMAND — launching on port {args.port}")
     print(f"{'═'*55}")
     print(f"  Default backend: {args.backend}")
     print(f"  API keys loaded from environment:")
     for key in ["GOOGLE_API_KEY", "HF_TOKEN"]:
         val = os.environ.get(key, "")
         masked = (val[:6] + "..." + val[-3:]) if len(val) > 12 else ("(not set)" if not val else "(set)")
-        star = " ★" if key == "GOOGLE_API_KEY" else ""
+        star = " *" if key == "GOOGLE_API_KEY" else ""
         print(f"    {key}: {masked}{star}")
     print(f"{'\u2550'*55}\n")
 
